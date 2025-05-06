@@ -1,14 +1,16 @@
+"use client"
+
 import React, {
     useRef,
     useEffect,
     useState
 } from 'react';
 
-import * as THREE from 'three';
+import { 
+    useFrame
+} from '@react-three/fiber';
 
-import type { 
-    GlobeProps
-} from '@/app/_types/types';
+import * as THREE from 'three';
 
 const Earth = () => {
     // earth mesh
@@ -26,17 +28,23 @@ const Earth = () => {
             setEarthTexture(texture);
         });
         
-        textureLoader.load('/assets/earth_bumpmap.jpg', (texture) => {
-            setBumpMap(texture);
-        });
+        // textureLoader.load('/assets/earth_bumpmap.jpg', (texture) => {
+        //     setBumpMap(texture);
+        // });
         
-        textureLoader.load('/assets/earth_specular.jpg', (texture) => {
-            setSpecularMap(texture);
-        });
+        // textureLoader.load('/assets/earth_specular.jpg', (texture) => {
+        //     setSpecularMap(texture);
+        // });
     }, []);
 
+    useFrame(() => {
+        if (earthRef.current) {
+          earthRef.current.rotation.y += 0.001;
+        }
+      });
+
     if (!earthTexture) {
-        return null; // Return null or a loading sphere until textures are loaded
+        return null;
     }
 
     return (
@@ -53,3 +61,5 @@ const Earth = () => {
         </mesh>
     );
 }
+
+export default Earth;
