@@ -41,21 +41,12 @@ const sampleTradeData = [
     commodity: 'coffee'
   }
 ];
+
+import CustomGlobe from './_components/globe/Globe';
 // LANDING PAGE
 const HomePage = () => {
   return (
-    <div className="w-full">
-      <Canvas camera={{ position: [0, 0, 6], fov: 45 }}>
-        <Earth/>
-        <OrbitControls 
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={3}
-          maxDistance={10}
-        />
-      </Canvas>
-    </div>
+    <CustomGlobe />
   );
 }
 
