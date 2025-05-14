@@ -120,9 +120,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* styles/globals.css or your component-specific CSS */
-.leaflet-container {
-  background: black !important; /* force black background */
-}
-

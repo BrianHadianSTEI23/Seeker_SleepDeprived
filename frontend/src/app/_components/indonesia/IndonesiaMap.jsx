@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, GeoJSON, useMap } from "react-leaflet";
+import { MapContainer, GeoJSON, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 const INDONESIA_GEOJSON_URL =
@@ -55,13 +55,13 @@ export default function IndonesiaMap() {
     const provinceName = feature.properties.propinsi;
 
     setSelectedProvinces((prev) => {
-      const updated =
-        prev.includes(provinceName)
-          ? prev.filter((name) => name !== provinceName)
-          : prev.length < 2
-          ? [...prev, provinceName]
-          : [prev[1], provinceName];
-      return updated;
+      if (prev.includes(provinceName)) {
+        return prev.filter((name) => name !== provinceName);
+      }
+      if (prev.length < 2) {
+        return [...prev, provinceName];
+      }
+      return [prev[1], provinceName];
     });
 
     setSelectedLayer(layer);
@@ -83,7 +83,6 @@ export default function IndonesiaMap() {
       click: () => handleProvinceClick(feature, layer),
     });
 
-    // Style for the provinces
     layer.setStyle({
       color: "#444", // Border color
       fillColor: selectedProvinces.includes(provinceName) ? "#fde047" : "#60a5fa", // Default color is #60a5fa
@@ -94,7 +93,6 @@ export default function IndonesiaMap() {
 
   useEffect(() => {
     fetchGeoData();
-    fetchCityGeoData();
   }, []);
 
   useEffect(() => {
