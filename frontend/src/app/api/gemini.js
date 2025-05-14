@@ -22,7 +22,17 @@ Provide:
 3. Estimated supply condition
 4. Investment recommendation
 
-Return in JSON format.
+Return ONLY a valid JSON object without explanation or formatting. Enclose the JSON with triple backticks.
+
+Example format:
+\`\`\`
+{
+  "commodities": ["palm oil", "rubber"],
+  "price_fluctuation": "Increased by 5%",
+  "supply_condition": "Stable",
+  "investment_recommendation": "High potential in palm oil sector"
+}
+\`\`\`
 `;
 
   try {
@@ -33,16 +43,16 @@ Return in JSON format.
     const model = genAI.model({ model: "gemini-pro" }); // Changed to a generally available model
 
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    console.log(result)
+    const raw = result.response.text();
+    const jsonText = raw.replace(/```(json)?/g, '').trim();
 
-    // Attempt to parse the JSON response
     try {
-      const jsonResult = JSON.parse(text);
+      const jsonResult = JSON.parse(jsonText);
       res.status(200).json({ result: jsonResult });
     } catch (jsonError) {
-      console.error('Error parsing JSON:', jsonError);
-      console.log('Raw response:', text);
-      res.status(500).json({ error: 'Failed to parse Gemini response as JSON' });
+      console.error("Failed to parse Gemini response:", jsonError);
+      res.status(500).json({ error: "Gemini returned non-JSON data" });
     }
 
   } catch (error) {
