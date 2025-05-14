@@ -2,7 +2,10 @@ import React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { COUNTRIES_DATA } from "../../_data/countries_data";
 import HEX_DATA from "../../_data/countries_hex_data.json";
-import Globe from "react-globe.gl";
+// import Globe from "react-globe.gl";
+import dynamic from "next/dynamic";
+
+const Globe = dynamic(() => import("react-globe.gl"), { ssr: false });
 
 const getRandomCountry = () => {
   return COUNTRIES_DATA[Math.floor(Math.random() * COUNTRIES_DATA.length)];
