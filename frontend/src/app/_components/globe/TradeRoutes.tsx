@@ -15,13 +15,13 @@ import {
 } from '@react-three/fiber'
 
 const TradeRoute = ({ 
-        startLat, 
-        startLng, 
-        endLat, 
-        endLng, 
-        volume, 
-        commodity 
-    }: TradeRoute) => {
+    startLat, 
+    startLng, 
+    endLat, 
+    endLng, 
+    volume, 
+    commodity 
+}: TradeRoute) => {
     const curveRef = useRef<THREE.Line>(null);
     const [progress, setProgress] = useState(0);
     
