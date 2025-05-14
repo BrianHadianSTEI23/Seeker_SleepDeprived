@@ -40,6 +40,7 @@ export default function IndonesiaMap() {
   const [selectedGeoFeature, setSelectedGeoFeature] = useState(null);
   const [cityGeoData, setCityGeoData] = useState(null);
   const [filteredCityGeoData, setFilteredCityGeoData] = useState(null);
+  const [selectedLayer, setSelectedLayer] = useState(null);
 
 
   const fetchGeoData = async () => {
@@ -66,7 +67,8 @@ export default function IndonesiaMap() {
           : [prev[1], provinceName];
       return updated;
     });
-
+    
+    setSelectedLayer(layer);
     setSelectedGeoFeature(feature); // 👈 save the whole GeoJSON feature
     
     layer.setStyle({
@@ -145,6 +147,9 @@ export default function IndonesiaMap() {
         <div className="w-1/2 h-full p-6 overflow-auto bg-gray-900 relative transition-all duration-500">
           <button
             onClick={() => {
+              if (selectedLayer && geoJsonRef.current) {
+                geoJsonRef.current.resetStyle(selectedLayer); // Reset to default style
+              }
               setSelectedGeoFeature(null);
               setSelectedProvinces([]);
               setFilteredCityGeoData(null);
