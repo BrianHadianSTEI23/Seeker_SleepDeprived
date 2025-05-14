@@ -38,6 +38,7 @@ export default function IndonesiaMap() {
   const [cityGeoData, setCityGeoData] = useState(null);
   const [filteredCityGeoData, setFilteredCityGeoData] = useState(null);
   const [selectedLayer, setSelectedLayer] = useState(null);
+  const [geminiAnalysis, setGeminiAnalysis] = useState(null);  // <-- State for Gemini response
 
   const fetchGeoData = async () => {
     const response = await fetch(INDONESIA_GEOJSON_URL);
@@ -51,8 +52,9 @@ export default function IndonesiaMap() {
     setCityGeoData(data);
   };
 
-  const handleProvinceClick = (feature, layer) => {
-    const provinceName = feature.properties.propinsi;
+  const handleProvinceClick = async (feature, layer) => {
+    const provinceName = feature.properties.state;
+    console.log('Province clicked:', provinceName); // Debug log
 
     setSelectedProvinces((prev) => {
       const updated =
@@ -74,10 +76,26 @@ export default function IndonesiaMap() {
       weight: 2,
       fillOpacity: 0.9,
     });
+
+    // Call Gemini API
+    try {
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ provinceData: feature.properties }),
+      });
+
+      const data = await response.json();
+      setGeminiAnalysis(data.result);  // Set the Gemini analysis result here
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+    }
   };
 
   const onEachProvince = (feature, layer) => {
-    const provinceName = feature.properties.propinsi;
+    const provinceName = feature.properties.state;
 
     layer.on({
       click: () => handleProvinceClick(feature, layer),
@@ -99,7 +117,7 @@ export default function IndonesiaMap() {
 
   useEffect(() => {
     if (selectedGeoFeature && cityGeoData) {
-      const provinceName = selectedGeoFeature.properties.propinsi;
+      const provinceName = selectedGeoFeature.properties.state;
 
       const filteredFeatures = cityGeoData.features.filter(
         (feature) => feature.properties.province_name === provinceName
@@ -116,7 +134,7 @@ export default function IndonesiaMap() {
 
   return (
     <div className={`flex h-screen bg-black text-white ${selectedGeoFeature ? "flex-row" : ""}`}>
-      {/* Map section: full width when no province is selected, half width when selected */}
+      {/* Map section */}
       <div className={`${selectedGeoFeature ? "w-1/2 relative" : "w-full"} h-full transition-all duration-500`}>
         <MapContainer
           center={[-2, 118]}
@@ -139,13 +157,12 @@ export default function IndonesiaMap() {
         </MapContainer>
       </div>
 
-      {/* Right half: province info, only visible when a province is selected */}
+      {/* Right half: province info */}
       {selectedGeoFeature && (
         <div className="w-1/2 h-full p-6 overflow-auto bg-gray-900 relative transition-all duration-500">
           <button
             onClick={() => {
               if (selectedLayer && geoJsonRef.current) {
-                // Reset to the default color when exiting the highlight mode
                 selectedLayer.setStyle({
                   fillColor: "#60a5fa", // Reset to default color
                   color: "#444", // Border color
@@ -158,6 +175,7 @@ export default function IndonesiaMap() {
               setSelectedLayer(null);
               setSelectedProvinces([]);
               setFilteredCityGeoData(null);
+              setGeminiAnalysis(null); // Optional: clear result when closing
             }}
             className="absolute top-4 right-4 text-white text-xl font-bold hover:text-red-400"
             title="Close"
@@ -177,6 +195,17 @@ export default function IndonesiaMap() {
               {JSON.stringify(selectedGeoFeature.properties, null, 2)}
             </pre>
           </div>
+
+          {geminiAnalysis && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Gemini Analysis:</h3>
+              <pre className="bg-gray-800 p-4 rounded text-sm whitespace-pre-wrap">
+                {typeof geminiAnalysis === 'string'
+                  ? geminiAnalysis
+                  : JSON.stringify(geminiAnalysis, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>
