@@ -1,0 +1,857 @@
+### 2. Configure Next.js for Three.js
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  webpack: (config) => {
+    // Important: This lets Next.js handle Three.js correctly
+    config.externals.push({
+      canvas: 'canvas',
+    });
+    return config;
+  },
+};
+
+module.exports = nextConfig;
+```
+
+### 3. Create a Three.js Client Component
+
+Create a file at `app/components/globe/Globe.tsx`:
+
+```typescript
+'use client'
+
+import React, { useRef, useEffect, useState } from 'react';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
+import { TextureLoader } from 'three';
+
+
+
+// Earth Component (the actual globe)
+const Earth = () => {
+  const earthRef = useRef<THREE.Mesh>(null);
+  
+  // For Next.js, we need to handle texture loading with suspense or useEffect
+  const [earthTexture, setEarthTexture] = useState<THREE.Texture | null>(null);
+  const [bumpMap, setBumpMap] = useState<THREE.Texture | null>(null);
+  const [specularMap, setSpecularMap] = useState<THREE.Texture | null>(null);
+  
+  useEffect(() => {
+    const textureLoader = new THREE.TextureLoader();
+    
+    // Load textures
+    textureLoader.load('/assets/earth_texture.jpg', (texture) => {
+      setEarthTexture(texture);
+    });
+    
+    textureLoader.load('/assets/earth_bumpmap.jpg', (texture) => {
+      setBumpMap(texture);
+    });
+    
+    textureLoader.load('/assets/earth_specular.jpg', (texture) => {
+      setSpecularMap(texture);
+    });
+  }, []);
+
+  // Rotate the earth slowly
+  useFrame(() => {
+    if (earthRef.current) {
+      earthRef.current.rotation.y += 0.001;
+    }
+  });
+
+  if (!earthTexture) {
+    return null; // Return null or a loading sphere until textures are loaded
+  }
+
+  return (
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[2, 64, 64]} />
+      <meshPhongMaterial 
+        map={earthTexture} 
+        bumpMap={bumpMap || undefined}
+        bumpScale={0.05}
+        specularMap={specularMap || undefined}
+        specular={new THREE.Color('grey')}
+        shininess={10}
+      />
+    </mesh>
+  );
+};
+
+// Helper function to convert lat/lng to 3D vector
+const latLngToVector3 = (lat: number, lng: number, radius: number) => {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lng + 180) * (Math.PI / 180);
+  
+  return {
+    x: -radius * Math.sin(phi) * Math.cos(theta),
+    y: radius * Math.cos(phi),
+    z: radius * Math.sin(phi) * Math.sin(theta)
+  };
+};
+
+// Trade Route Component
+const TradeRoute = ({ 
+  startLat, 
+  startLng, 
+  endLat, 
+  endLng, 
+  volume, 
+  commodity 
+}: TradeRoute) => {
+  const curveRef = useRef<THREE.Line>(null);
+  const [progress, setProgress] = useState(0);
+  
+  // Convert lat/lng to 3D coordinates
+  const startPos = latLngToVector3(startLat, startLng, 2.05);
+  const endPos = latLngToVector3(endLat, endLng, 2.05);
+  
+  // Create a curved path between points
+  const curve = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(startPos.x, startPos.y, startPos.z),
+    new THREE.Vector3(
+      (startPos.x + endPos.x) / 2,
+      (startPos.y + endPos.y) / 2,
+      (startPos.z + endPos.z) / 2 + 1
+    ),
+    new THREE.Vector3(endPos.x, endPos.y, endPos.z)
+  );
+  
+  const points = curve.getPoints(50);
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  
+  // Color based on commodity type
+  const commodityColors: {[key: string]: string} = {
+    'oil': 'black',
+    'rice': 'yellow',
+    'palm_oil': 'orange',
+    'coffee': 'brown',
+    'rubber': 'green'
+  };
+  
+  const color = commodityColors[commodity] || 'white';
+  
+  // Size based on volume
+  const lineWidth = Math.max(0.5, Math.min(volume / 1000, 5));
+
+  // Animation frame
+  useFrame(() => {
+    // Animate progress for particle movement
+    setProgress((prev) => (prev + 0.005) % 1);
+  });
+  
+  // Get point along curve for particle animation
+  const particlePosition = curve.getPointAt(progress);
+  
+  return (
+    <group>
+      <line ref={curveRef} geometry={geometry}>
+        <lineBasicMaterial 
+          color={color} 
+          linewidth={lineWidth} 
+          transparent={true} 
+          opacity={0.4} 
+        />
+      </line>
+      
+      {/* Animated particle */}
+      {particlePosition && (
+        <mesh position={[particlePosition.x, particlePosition.y, particlePosition.z]}>
+          <sphereGeometry args={[0.03, 8, 8]} />
+          <meshBasicMaterial color={color} />
+        </mesh>
+      )}
+    </group>
+  );
+};
+
+// Trade Routes Component
+const TradeRoutes = ({ tradeData }: { tradeData?: TradeRoute[] }) => {
+  return (
+    <group>
+      {tradeData && tradeData.map((route, index) => (
+        <TradeRoute 
+          key={index} 
+          startLat={route.startLat} 
+          startLng={route.startLng}
+          endLat={route.endLat} 
+          endLng={route.endLng}
+          volume={route.volume} 
+          commodity={route.commodity}
+        />
+      ))}
+    </group>
+  );
+};
+
+// Country Highlight Component
+const CountryHighlight = ({ 
+  countryData, 
+  onCountryClick 
+}: { 
+  countryData?: CountryData[], 
+  onCountryClick?: (country: CountryData) => void 
+}) => {
+  const highlightRef = useRef<THREE.Mesh>(null);
+  const [highlightTexture, setHighlightTexture] = useState<THREE.Texture | null>(null);
+  
+  useEffect(() => {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('/assets/countries_highlight.png', (texture) => {
+      setHighlightTexture(texture);
+    });
+  }, []);
+  
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    // In a real app, you'd do raycasting to determine which country was clicked
+    if (onCountryClick && countryData && countryData.length > 0) {
+      onCountryClick(countryData[0]);
+    }
+  };
+  
+  if (!highlightTexture) return null;
+  
+  return (
+    <mesh 
+      ref={highlightRef} 
+      onPointerDown={handlePointerDown}
+      position={[0, 0, 0]}
+    >
+      <sphereGeometry args={[2.01, 64, 64]} />
+      <meshBasicMaterial 
+        map={highlightTexture}
+        transparent={true}
+        opacity={0.3}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+};
+
+// Main Globe Component
+const GlobeVisualization = ({ countryData, tradeData }: GlobeProps) => {
+  const handleCountryClick = (country: CountryData) => {
+    console.log("Country clicked:", country);
+    // You could open a modal or update state here
+  };
+
+  return (
+    <div className="w-full h-screen">
+      <Canvas camera={{ position: [0, 0, 6], fov: 45 }}>
+        <ambientLight intensity={0.2} />
+        <pointLight position={[10, 10, 10]} intensity={1.5} />
+        <directionalLight position={[-10, 10, 5]} intensity={1} />
+        
+        <Earth />
+        <TradeRoutes tradeData={tradeData} />
+        <CountryHighlight 
+          countryData={countryData} 
+          onCountryClick={handleCountryClick} 
+        />
+        
+        <OrbitControls 
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          minDistance={3}
+          maxDistance={10}
+        />
+      </Canvas>
+    </div>
+  );
+};
+
+export default GlobeVisualization;
+```
+
+### 4. Create the Dashboard Page
+
+Create a file at `app/dashboard/page.tsx`:
+
+```typescript
+import React from 'react';
+import dynamic from 'next/dynamic';
+
+// Import the Globe component dynamically to avoid SSR issues with Three.js
+const GlobeVisualization = dynamic(
+  () => import('../components/globe/Globe'),
+  { ssr: false }
+);
+
+// Import other components normally
+import PriceChartContainer from '../components/charts/PriceChartContainer';
+
+// Sample data for development
+const sampleTradeData = [
+  {
+    startLat: 1.3521, // Singapore
+    startLng: 103.8198,
+    endLat: 13.7563, // Thailand
+    endLng: 100.5018,
+    volume: 2500,
+    commodity: 'rice'
+  },
+  {
+    startLat: 4.2105, // Malaysia
+    startLng: 101.9758,  
+    endLat: -6.2088, // Indonesia
+    endLng: 106.8456,
+    volume: 3800,
+    commodity: 'palm_oil'
+  },
+  {
+    startLat: 16.8409, // Vietnam
+    startLng: 107.0843,
+    endLat: -6.2088, // Indonesia
+    endLng: 106.8456,
+    volume: 1500,
+    commodity: 'coffee'
+  }
+];
+
+export default function Dashboard() {
+  return (
+    <div className="flex flex-col h-screen">
+      <div className="flex-1">
+        <GlobeVisualization tradeData={sampleTradeData} />
+      </div>
+      
+      <div className="h-64 bg-gray-100 p-4">
+        <PriceChartContainer />
+      </div>
+    </div>
+  );
+}
+```
+
+### 5. Create a Price Chart Component
+
+Create a file at `app/components/charts/PriceChartContainer.tsx`:
+
+```typescript
+'use client'
+
+import React, { useState, useEffect } from 'react';
+import PriceChart from './PriceChart';
+
+// Mock data for development
+const mockPriceData = [
+  { date: '2024-01', price: 450, commodity: 'rice' },
+  { date: '2024-02', price: 460, commodity: 'rice' },
+  { date: '2024-03', price: 455, commodity: 'rice' },
+  { date: '2024-04', price: 470, commodity: 'rice' },
+  { date: '2024-01', price: 900, commodity: 'palm_oil' },
+  { date: '2024-02', price: 920, commodity: 'palm_oil' },
+  { date: '2024-03', price: 950, commodity: 'palm_oil' },
+  { date: '2024-04', price: 930, commodity: 'palm_oil' },
+  { date: '2024-01', price: 2200, commodity: 'coffee' },
+  { date: '2024-02', price: 2300, commodity: 'coffee' },
+  { date: '2024-03', price: 2250, commodity: 'coffee' },
+  { date: '2024-04', price: 2400, commodity: 'coffee' }
+];
+
+const PriceChartContainer = () => {
+  const [selectedCommodity, setSelectedCommodity] = useState('all');
+  const [filteredData, setFilteredData] = useState(mockPriceData);
+  
+  useEffect(() => {
+    // Filter data based on selected commodity
+    if (selectedCommodity === 'all') {
+      setFilteredData(mockPriceData);
+    } else {
+      setFilteredData(mockPriceData.filter(item => item.commodity === selectedCommodity));
+    }
+  }, [selectedCommodity]);
+  
+  return (
+    <div>
+      <div className="mb-4">
+        <label className="mr-2">Filter by commodity:</label>
+        <select 
+          value={selectedCommodity}
+          onChange={(e) => setSelectedCommodity(e.target.value)}
+          className="border p-1"
+        >
+          <option value="all">All Commodities</option>
+          <option value="rice">Rice</option>
+          <option value="palm_oil">Palm Oil</option>
+          <option value="coffee">Coffee</option>
+          <option value="rubber">Rubber</option>
+          <option value="oil">Oil</option>
+        </select>
+      </div>
+      
+      <PriceChart data={filteredData} />
+    </div>
+  );
+};
+
+export default PriceChartContainer;
+```
+
+Create a file at `app/components/charts/PriceChart.tsx`:
+
+```typescript
+'use client'
+
+import React from 'react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, 
+  Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+
+type PriceData = {
+  date: string;
+  price: number;
+  commodity: string;
+};
+
+type PriceChartProps = {
+  data: PriceData[];
+};
+
+const PriceChart = ({ data }: PriceChartProps) => {
+  // Group data by commodity
+  const commodities = [...new Set(data.map(item => item.commodity))];
+  
+  // Colors for different commodities
+  const commodityColors: {[key: string]: string} = {
+    'rice': '#8884d8',
+    'palm_oil': '#82ca9d',
+    'coffee': '#8b4513',
+    'rubber': '#2ca02c',
+    'oil': '#000000'
+  };
+
+  return (
+    <div className="h-full">
+      <h3 className="text-lg font-semibold mb-2">Commodity Price Trends</h3>
+      <ResponsiveContainer width="100%" height="80%">
+        <LineChart>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          
+          {commodities.map(commodity => (
+            <Line
+              key={commodity}
+              type="monotone"
+              data={data.filter(item => item.commodity === commodity)}
+              dataKey="price"
+              name={commodity.replace('_', ' ')}
+              stroke={commodityColors[commodity] || '#999'}
+              activeDot={{ r: 8 }}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default PriceChart;
+```
+
+### 6. Create API Routes for Data
+
+Create a file at `app/api/trade-flows/route.ts`:
+
+```typescript
+import { NextResponse } from 'next/server';
+
+// Mock data for now - will connect to your database/ML model later
+const mockTradeData = [
+  {
+    startLat: 1.3521, // Singapore
+    startLng: 103.8198,
+    endLat: 13.7563, // Thailand
+    endLng: 100.5018,
+    volume: 2500,
+    commodity: 'rice'
+  },
+  {
+    startLat: 4.2105, // Malaysia
+    startLng: 101.9758,  
+    endLat: -6.2088, // Indonesia
+    endLng: 106.8456,
+    volume: 3800,
+    commodity: 'palm_oil'
+  },
+  {
+    startLat: 16.8409, // Vietnam
+    startLng: 107.0843,
+    endLat: -6.2088, // Indonesia
+    endLng: 106.8456,
+    volume: 1500,
+    commodity: 'coffee'
+  }
+];
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const commodity = searchParams.get('commodity');
+  
+  let data = mockTradeData;
+  
+  // Filter by commodity if specified
+  if (commodity && commodity !== 'all') {
+    data = mockTradeData.filter(route => route.commodity === commodity);
+  }
+  
+  return NextResponse.json(data);
+}
+```
+
+Create a file at `app/api/predictions/route.ts`:
+
+```typescript
+import { NextResponse } from 'next/server';
+
+// Mock prediction data - will replace with actual Gemini model predictions
+const mockPredictions = {
+  rice: {
+    current: 470,
+    prediction_1m: 485,
+    prediction_3m: 510,
+    confidence: 0.85,
+    factors: [
+      { name: 'Weather patterns', impact: 0.7 },
+      { name: 'Export restrictions', impact: 0.5 },
+      { name: 'Production yield', impact: 0.8 }
+    ]
+  },
+  palm_oil: {
+    current: 930,
+    prediction_1m: 950,
+    prediction_3m: 980,
+    confidence: 0.78,
+    factors: [
+      { name: 'Seasonal demand', impact: 0.6 },
+      { name: 'Production costs', impact: 0.7 },
+      { name: 'Competing oils prices', impact: 0.5 }
+    ]
+  },
+  coffee: {
+    current: 2400,
+    prediction_1m: 2350,
+    prediction_3m: 2280,
+    confidence: 0.82,
+    factors: [
+      { name: 'Harvest forecasts', impact: 0.9 },
+      { name: 'Global consumption', impact: 0.6 },
+      { name: 'Shipping disruptions', impact: 0.4 }
+    ]
+  }
+};
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const commodity = searchParams.get('commodity');
+  
+  // Return specific commodity prediction or all
+  if (commodity && commodity !== 'all' && commodity in mockPredictions) {
+    return NextResponse.json({ 
+      commodity: commodity,
+      ...mockPredictions[commodity as keyof typeof mockPredictions]
+    });
+  }
+  
+  return NextResponse.json(Object.entries(mockPredictions).map(([commodity, data]) => ({
+    commodity,
+    ...data
+  })));
+}
+```
+
+### 7. Create a React Service for API Communication
+
+Create a file at `app/services/api.ts`:
+
+```typescript
+// API service for fetching data from our Next.js API routes
+
+export const fetchTradeData = async (commodity = 'all') => {
+  try {
+    const response = await fetch(`/api/trade-flows?commodity=${commodity}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch trade data');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching trade data:', error);
+    return [];
+  }
+};
+
+export const fetchCommodityPrices = async (commodity = 'all') => {
+  try {
+    const response = await fetch(`/api/commodity-prices?commodity=${commodity}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch price data');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching price data:', error);
+    return [];
+  }
+};
+
+export const fetchPredictions = async (commodity = 'all') => {
+  try {
+    const response = await fetch(`/api/predictions?commodity=${commodity}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch predictions');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching predictions:', error);
+    return [];
+  }
+};
+```
+
+### 8. Set up the Main Layout
+
+Create a file at `app/layout.tsx`:
+
+```typescript
+import './globals.css';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'SE Asia Commodities Trading Platform',
+  description: 'Powered by Gemini AI for commodity trading predictions',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <div className="flex h-screen">
+          <aside className="bg-gray-800 text-white w-64 flex-shrink-0">
+            <div className="p-4">
+              <h2 className="text-xl font-bold">APAC Trading</h2>
+            </div>
+            <nav className="mt-6">
+              <ul>
+                <li className="mb-2">
+                  <a href="/" className="flex items-center px-6 py-3 text-lg bg-blue-600">
+                    <span className="mr-3">📊</span>
+                    Dashboard
+                  </a>
+                </li>
+                <li className="mb-2">
+                  <a href="/predictions" className="flex items-center px-6 py-3 text-lg hover:bg-gray-700">
+                    <span className="mr-3">🔮</span>
+                    Predictions
+                  </a>
+                </li>
+                <li className="mb-2">
+                  <a href="/commodities" className="flex items-center px-6 py-3 text-lg hover:bg-gray-700">
+                    <span className="mr-3">🌾</span>
+                    Commodities
+                  </a>
+                </li>
+                <li className="mb-2">
+                  <a href="/analysis" className="flex items-center px-6 py-3 text-lg hover:bg-gray-700">
+                    <span className="mr-3">📈</span>
+                    Analysis
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </aside>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <header className="bg-white shadow h-16 flex items-center px-6">
+              <h1 className="text-2xl font-semibold text-gray-800">
+                SE Asia Commodities Trading Platform
+              </h1>
+              <div className="ml-auto flex items-center">
+                <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                  Get Predictions
+                </button>
+              </div>
+            </header>
+            <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+              {children}
+            </main>
+          </div>
+        </div>
+      </body>
+    </html>
+  );
+}
+```
+
+### 9. Create Main App Page
+
+Create a file at `app/page.tsx`:
+
+```typescript
+import { redirect } from 'next/navigation';
+
+export default function Home() {
+  // Redirect to the dashboard
+  redirect('/dashboard');
+}
+```
+
+### 10. Create a Predictions Page
+
+Create a file at `app/predictions/page.tsx`:
+
+```typescript
+'use client'
+
+import React, { useState, useEffect } from 'react';
+import { fetchPredictions } from '../services/api';
+
+type PredictionFactor = {
+  name: string;
+  impact: number;
+};
+
+type Prediction = {
+  commodity: string;
+  current: number;
+  prediction_1m: number;
+  prediction_3m: number;
+  confidence: number;
+  factors: PredictionFactor[];
+};
+
+export default function Predictions() {
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPredictions = async () => {
+      try {
+        const data = await fetchPredictions();
+        setPredictions(data);
+      } catch (error) {
+        console.error("Error loading predictions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPredictions();
+  }, []);
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-full">Loading predictions...</div>;
+  }
+
+  return (
+    <div className="container mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Commodity Price Predictions</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {predictions.map((prediction) => (
+          <div key={prediction.commodity} className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4 capitalize">{prediction.commodity.replace('_', ' ')}</h2>
+            
+            <div className="mb-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Current price:</span>
+                <span className="font-medium">${prediction.current}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">1-month forecast:</span>
+                <span className="font-medium">${prediction.prediction_1m}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">3-month forecast:</span>
+                <span className="font-medium">${prediction.prediction_3m}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Confidence:</span>
+                <span className="font-medium">{(prediction.confidence * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+            
+            <h3 className="text-lg font-medium mb-2">Key Factors</h3>
+            <ul className="space-y-2">
+              {prediction.factors.map((factor, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>{factor.name}</span>
+                  <div className="w-24 bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full"
+                      style={{ width: `${factor.impact * 100}%` }}
+                    ></div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### 11. Download Earth textures
+
+You'll need texture images for the Earth. Create a `public/assets/` folder and download these files:
+
+- earth_texture.jpg (Earth color map)
+- earth_bumpmap.jpg (Bump map for terrain elevation)
+- earth_specular.jpg (Specular map for ocean reflections)
+- countries_highlight.png (For country highlighting)
+
+## Additional Features
+
+### 12. Creating a Connection to Google Vertex AI and Gemini
+
+First, install the required packages:
+
+```bash
+npm install @google-cloud/vertexai
+```
+
+Create a file at `app/services/gemini.ts`:
+
+```typescript
+import { VertexAI } from '@google-cloud/vertexai';
+
+// Initialize Vertex with your Google Cloud configuration
+const vertexAI = new VertexAI({
+  project: process.env.GOOGLE_CLOUD_PROJECT!, 
+  location: process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
+});
+
+// Get the Gemini Pro model
+const model = vertexAI.getGenerativeModel({ model: 'gemini-pro' });
+
+// Function to predict commodity prices
+export async function predictCommodityPrice(
+  commodity: string, 
+  historicalData: any[], 
+  economicFactors: any[]
+) {
+  try {
+    // Format the prompt for the model
+    const prompt = `
+      Based on the following historical data for ${commodity}:
+      ${JSON.stringify(historicalData)}
+      
+      And these economic factors:
+      ${JSON.stringify(economicFactors)}
+      
+      Predict the price of ${commodity} for the next 1 month and 3 months.
+      Provide a confidence score (0-1) and list the
