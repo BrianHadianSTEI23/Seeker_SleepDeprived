@@ -38,7 +38,6 @@ export default function IndonesiaMap() {
   const [cityGeoData, setCityGeoData] = useState(null);
   const [filteredCityGeoData, setFilteredCityGeoData] = useState(null);
   const [selectedLayer, setSelectedLayer] = useState(null);
-  const [provinceStyles, setProvinceStyles] = useState({}); // Initialize provinceStyles
 
   const fetchGeoData = async () => {
     const response = await fetch(INDONESIA_GEOJSON_URL);
@@ -68,18 +67,10 @@ export default function IndonesiaMap() {
     setSelectedLayer(layer);
     setSelectedGeoFeature(feature);
 
-    // Store original style if not already stored
-    if (!provinceStyles[provinceName]) {
-      setProvinceStyles((prev) => ({
-        ...prev,
-        [provinceName]: layer.options.fillColor, // Store the original color
-      }));
-    }
-
-    // Apply the selected style
+    // Highlight the province with a new color
     layer.setStyle({
-      fillColor: "#fde047",
-      color: "#facc15",
+      fillColor: "#fde047", // Highlighted color
+      color: "#facc15", // Border color when highlighted
       weight: 2,
       fillOpacity: 0.9,
     });
@@ -95,7 +86,7 @@ export default function IndonesiaMap() {
     // Style for the provinces
     layer.setStyle({
       color: "#444", // Border color
-      fillColor: selectedProvinces.includes(provinceName) ? "#fde047" : "#60a5fa", // Color when selected
+      fillColor: selectedProvinces.includes(provinceName) ? "#fde047" : "#60a5fa", // Default color is #60a5fa
       fillOpacity: 0.7,
       weight: 1,
     });
@@ -154,13 +145,10 @@ export default function IndonesiaMap() {
           <button
             onClick={() => {
               if (selectedLayer && geoJsonRef.current) {
-                const provinceName = selectedGeoFeature.properties.propinsi;
-                const originalColor = provinceStyles[provinceName] || "#60a5fa"; // Default color
-
-                // Apply original style
+                // Reset to the default color when exiting the highlight mode
                 selectedLayer.setStyle({
-                  fillColor: originalColor,
-                  color: "#444",
+                  fillColor: "#60a5fa", // Reset to default color
+                  color: "#444", // Border color
                   fillOpacity: 0.7,
                   weight: 1,
                 });
