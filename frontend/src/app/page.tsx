@@ -41,12 +41,13 @@ const sampleTradeData = [
     commodity: 'coffee'
   }
 ];
-
+import IndonesiaMap from './_components/indonesia/IndonesiaMap';
 import CustomGlobe from './_components/globe/Globe';
+
 // LANDING PAGE
 const HomePage = () => {
   return (
-    <CustomGlobe />
+    <IndonesiaMap/>
   );
 }
 
