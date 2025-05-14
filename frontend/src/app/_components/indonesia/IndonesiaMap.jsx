@@ -6,7 +6,6 @@ const INDONESIA_GEOJSON_URL =
   "https://raw.githubusercontent.com/superpikar/indonesia-geojson/refs/heads/master/indonesia.geojson";
 const CITY_GEOJSON_URL = "https://raw.githubusercontent.com/okzapradhana/indonesia-city-geojson/master/indonesia-cities.json";
 
-
 function ZoomableGeoJSON({ data, onEachFeature, geoJsonRef, selectedFeature }) {
   const map = useMap();
   
@@ -28,8 +27,6 @@ function ZoomableGeoJSON({ data, onEachFeature, geoJsonRef, selectedFeature }) {
     }
   }, [selectedFeature, map]);
 
-  
-  
   return <GeoJSON data={data} onEachFeature={onEachFeature} ref={geoJsonRef} />;
 }
 
@@ -41,7 +38,7 @@ export default function IndonesiaMap() {
   const [cityGeoData, setCityGeoData] = useState(null);
   const [filteredCityGeoData, setFilteredCityGeoData] = useState(null);
   const [selectedLayer, setSelectedLayer] = useState(null);
-
+  const [provinceStyles, setProvinceStyles] = useState({}); // Initialize provinceStyles
 
   const fetchGeoData = async () => {
     const response = await fetch(INDONESIA_GEOJSON_URL);
@@ -67,10 +64,19 @@ export default function IndonesiaMap() {
           : [prev[1], provinceName];
       return updated;
     });
-    
+
     setSelectedLayer(layer);
-    setSelectedGeoFeature(feature); // 👈 save the whole GeoJSON feature
-    
+    setSelectedGeoFeature(feature);
+
+    // Store original style if not already stored
+    if (!provinceStyles[provinceName]) {
+      setProvinceStyles((prev) => ({
+        ...prev,
+        [provinceName]: layer.options.fillColor, // Store the original color
+      }));
+    }
+
+    // Apply the selected style
     layer.setStyle({
       fillColor: "#fde047",
       color: "#facc15",
@@ -78,7 +84,6 @@ export default function IndonesiaMap() {
       fillOpacity: 0.9,
     });
   };
-
 
   const onEachProvince = (feature, layer) => {
     const provinceName = feature.properties.propinsi;
@@ -100,7 +105,7 @@ export default function IndonesiaMap() {
     fetchGeoData();
     fetchCityGeoData();
   }, []);
-  
+
   useEffect(() => {
     if (selectedGeoFeature && cityGeoData) {
       const provinceName = selectedGeoFeature.properties.propinsi;
@@ -117,6 +122,7 @@ export default function IndonesiaMap() {
       setFilteredCityGeoData(null);
     }
   }, [selectedGeoFeature, cityGeoData]);
+
   return (
     <div className={`flex h-screen bg-black text-white ${selectedGeoFeature ? "flex-row" : ""}`}>
       {/* Map section: full width when no province is selected, half width when selected */}
@@ -148,9 +154,20 @@ export default function IndonesiaMap() {
           <button
             onClick={() => {
               if (selectedLayer && geoJsonRef.current) {
-                geoJsonRef.current.resetStyle(selectedLayer); // Reset to default style
+                const provinceName = selectedGeoFeature.properties.propinsi;
+                const originalColor = provinceStyles[provinceName] || "#60a5fa"; // Default color
+
+                // Apply original style
+                selectedLayer.setStyle({
+                  fillColor: originalColor,
+                  color: "#444",
+                  fillOpacity: 0.7,
+                  weight: 1,
+                });
               }
+
               setSelectedGeoFeature(null);
+              setSelectedLayer(null);
               setSelectedProvinces([]);
               setFilteredCityGeoData(null);
             }}
@@ -176,5 +193,4 @@ export default function IndonesiaMap() {
       )}
     </div>
   );
-
 }
