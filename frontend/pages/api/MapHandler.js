@@ -42,7 +42,7 @@ Example final format (USE THE SAME ATTRIBUTE FOR OUTPUT ATTRIBUTE, DON'T CHANGE 
 on above format, for example commodities, it means palm oil has an increase of value 5% for one last month, rubber has an decrease in value 3% for one last month`;
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const genAI = new GoogleGenerativeAI("AIzaSyDhn6wjMqQLhRD4ZCUqzAvPWHzd5tVhHsw");
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Public, functional model
 
     const result = await model.generateContent(prompt);
