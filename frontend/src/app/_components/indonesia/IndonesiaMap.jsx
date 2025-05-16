@@ -92,7 +92,7 @@ export default function IndonesiaMap({ onProvinceStats }) {
       // setup the province stats
       onProvinceStats({
         areaName: provinceName,
-        areaCommodity: analysisData.result.commodities,
+        areaCommodity: geminiAnalysis.commodities,
       });
 
     } catch (error) {
