@@ -18,24 +18,24 @@ Province: ${provinceData.state}
 
 Provide:
 1. Major commodities produced
-2. Price fluctuation in the last two months
+2. Price fluctuation in the last one month
 3. Estimated supply condition
 4. Investment recommendation
 
 Return ONLY a valid JSON object without explanation or formatting. Enclose the JSON with triple backticks.
 
-Example format:
+Example final format (USE THE SAME ATTRIBUTE FOR OUTPUT ATTRIBUTE, DON'T CHANGE THE FORMAT):
 \`\`\`
 {
   "commodities": [
-    "palm oil" : "5%, 
-    "rubber" : -3%
+    "palm oil" : "5%", 
+    "rubber" : "-3%"
   ],
-  "supply_condition": "Stable",
+  "supply_condition": "Stable/Scarce/Abundant",
   "investment_recommendation": ["High potential in palm oil sector"]
 }
 \`\`\`
-`;
+on above format, for example commodities, it means palm oil has an increase of value 5% for one last month, rubber has an decrease in value 3% for one last month`;
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
@@ -45,6 +45,7 @@ Example format:
     const raw = result.response.text();
 
     const jsonText = raw.replace(/```(json)?/g, '').trim();
+    console.log(jsonText)
 
     try {
       const jsonResult = JSON.parse(jsonText);

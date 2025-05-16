@@ -30,7 +30,7 @@ function ZoomableGeoJSON({ data, onEachFeature, geoJsonRef, selectedFeature }) {
   return <GeoJSON data={data} onEachFeature={onEachFeature} ref={geoJsonRef} />;
 }
 
-export default function IndonesiaMap() {
+export default function IndonesiaMap({ onProvinceStats }) {
   const [selectedProvinces, setSelectedProvinces] = useState([]);
   const [geoData, setGeoData] = useState(null);
   const geoJsonRef = useRef();
@@ -71,28 +71,41 @@ export default function IndonesiaMap() {
 
     // Highlight the province with a new color
     layer.setStyle({
-      fillColor: "#fde047", // Highlighted color
-      color: "#facc15", // Border color when highlighted
+      fillColor: "#fde047",
+      color: "#facc15",
       weight: 2,
       fillOpacity: 0.9,
     });
 
-    // Call Gemini API
     try {
-      const response = await fetch("/api/MapHandler", {
+      // Call Gemini analysis API
+      const analysisResponse = await fetch("/api/MapHandler", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ provinceData: feature.properties }),
       });
+      const analysisData = await analysisResponse.json();
+      setGeminiAnalysis(analysisData.result);
 
-      const data = await response.json();
-      setGeminiAnalysis(data.result);  // Set the Gemini analysis result here
+      // Call Statistics API
+      const statsResponse = await fetch("/api/Statistics", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ province: provinceName }),
+      });
+      const statsData = await statsResponse.json();
+      setProvinceStats(statsData.result);
+      onProvinceStats(statsData.result); // this sends data to HomePage
+
     } catch (error) {
-      console.error("Error calling Gemini API:", error);
+      console.error("Error calling APIs:", error);
     }
   };
+
 
   const onEachProvince = (feature, layer) => {
     const provinceName = feature.properties.state;
@@ -182,30 +195,71 @@ export default function IndonesiaMap() {
           >
             &times;
           </button>
-          <h2 className="text-xl font-bold mb-4">Selected Provinces:</h2>
-          <ul className="list-disc list-inside">
+          <h2 className="text-2xl font-bold mb-4">Selected Province:</h2>
+          {/* <ul className="list-disc list-inside">
             {selectedProvinces.map((province, index) => (
               <li key={index}>{province}</li>
             ))}
-          </ul>
+          </ul> */}
 
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Province Data:</h3>
+            <h3 className="text-xl font-bold mb-2">Province :</h3>
             <pre className="bg-gray-800 p-4 rounded">
-              {JSON.stringify(selectedGeoFeature.properties, null, 2)}
+              <span>
+               {selectedGeoFeature.properties.state || "N/A"}
+              </span>
             </pre>
           </div>
 
           {geminiAnalysis && (
             <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">Gemini Analysis:</h3>
-              <pre className="bg-gray-800 p-4 rounded text-sm whitespace-pre-wrap">
-                {typeof geminiAnalysis === 'string'
-                  ? geminiAnalysis
-                  : JSON.stringify(geminiAnalysis, null, 2)}
-              </pre>
+              <h3 className="text-xl font-bold mb-4">Analysis</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <span className="font-semibold ml-4 text-lg">Area Name: </span>{" "}
+                  <span className="text-lg">
+                    {selectedGeoFeature?.properties?.state || "N/A"}
+                  </span>
+                </div>
+
+                {/* Commodities Section */}
+                <div>
+                  <span className="font-bold ml-4 text-lg">Major Commodities & Price Fluctuations:</span>
+                  <ul className="list-disc list-inside ml-8 mt-1 text-lg">
+                    {geminiAnalysis.commodities
+                      ? Object.entries(geminiAnalysis.commodities).map(([commodity, fluctuation], idx) => (
+                          <li key={idx}>
+                            {commodity}: {fluctuation}
+                          </li>
+                        ))
+                      : <li>Not available</li>}
+                  </ul>
+                </div>
+
+                {/* Supply Condition */}
+                <div>
+                  <span className="font-bold ml-4 text-lg">Supply Condition:</span>{" "}
+                  <span className="text-lg">
+                    {geminiAnalysis.supply_condition || "Not available"}
+                  </span>
+                </div>
+
+                {/* Investment Recommendation */}
+                <div>
+                  <span className="font-bold ml-4 text-lg">Investment Recommendation:</span>
+                  <ul className="list-disc list-inside ml-8 mt-1 text-lg">
+                    {Array.isArray(geminiAnalysis.investment_recommendation)
+                      ? geminiAnalysis.investment_recommendation.map((rec, idx) => (
+                          <li key={idx}>{rec}</li>
+                        ))
+                      : <li>Not available</li>}
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
+
         </div>
       )}
     </div>

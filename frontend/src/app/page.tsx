@@ -9,6 +9,7 @@ const IndonesiaMap = dynamic(() => import("./_components/indonesia/IndonesiaMap"
 
 export default function HomePage() {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [provinceStats, setProvinceStats] = useState<Record<string, any> | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [statistics, setStatistics] = useState<any[] | null>(null);
   const [commodityIndex, setCommodityIndex] = useState(0);
@@ -74,7 +75,7 @@ export default function HomePage() {
     <div className="h-screen overflow-hidden scroll-smooth">
       <div
         ref={(el) => { sectionsRef.current[0] = el; }}
-        className="h-screen flex items-center justify-center bg-black text-white text-6xl font-bold font-satoshi"
+        className="h-screen flex items-center justify-center bg-black text-white text-6xl font-bold font-Satoshi tracking-widest"
       >
         Seeker
       </div>
@@ -83,7 +84,7 @@ export default function HomePage() {
         ref={(el) => { sectionsRef.current[1] = el; }}
         className="h-screen bg-black"
       >
-        <IndonesiaMap />
+        <IndonesiaMap onProvinceStats={setProvinceStats} />
       </div>
 
       <div
@@ -108,8 +109,31 @@ export default function HomePage() {
           </>
         )}
 
+        {provinceStats != null ? (
+          <div className="w-full bg-gray-800 text-white p-6">
+            <h2 className="text-2xl font-bold mb-4">Province Statistics</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {Object.entries(provinceStats).map(([key, value]) => (
+                <div key={key} className="bg-gray-900 p-4 rounded shadow">
+                  <p className="font-semibold capitalize">{key.replace(/_/g, " ")}:</p>
+                  <p className="text-sm">
+                    {typeof value === "object" ? JSON.stringify(value) : value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        </div>
+      </div>
+    );
+  }
+        
+
+
         {/* Animated Commodity Stats */}
-        <AnimatePresence mode="wait">
+        {/* <AnimatePresence mode="wait">
           {statistics && (
             <motion.div
               key={commodityIndex}
@@ -122,8 +146,4 @@ export default function HomePage() {
               <Statistics data={statistics[commodityIndex]} />
             </motion.div>
           )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
+        </AnimatePresence> */}
