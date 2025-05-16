@@ -89,17 +89,11 @@ export default function IndonesiaMap({ onProvinceStats }) {
       const analysisData = await analysisResponse.json();
       setGeminiAnalysis(analysisData.result);
 
-      // Call Statistics API
-      const statsResponse = await fetch("/api/Statistics", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ province: provinceName }),
+      // setup the province stats
+      onProvinceStats({
+        areaName: provinceName,
+        areaCommodity: analysisData.result.commodities,
       });
-      const statsData = await statsResponse.json();
-      setProvinceStats(statsData.result);
-      onProvinceStats(statsData.result); // this sends data to HomePage
 
     } catch (error) {
       console.error("Error calling APIs:", error);

@@ -45,8 +45,8 @@ on above format, for example commodities, it means palm oil has an increase of v
     const raw = result.response.text();
 
     const jsonText = raw.replace(/```(json)?/g, '').trim();
-    console.log(jsonText)
-
+    console.log("Map Handler : " + jsonText)
+    
     try {
       const jsonResult = JSON.parse(jsonText);
       res.status(200).json({ result: jsonResult });

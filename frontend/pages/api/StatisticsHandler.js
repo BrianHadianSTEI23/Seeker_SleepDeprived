@@ -1,23 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-function cleanJSONString (raw) {
-  return raw
-  .replace(/```(json)?/g, "")        // Remove Markdown formatting
-  .replace(/,\s*}/g, "}")            // Remove trailing commas
-  .replace(/,\s*]/g, "]")            // Remove trailing commas
-  .replace(/[“”]/g, '"')             // Replace smart quotes
-  .replace(/\u00A0/g, " ")           // Replace non-breaking space
-  .replace(/\r?\n/g, "")             // Remove all line breaks
-  .trim();
-};
-
 export default async function StatisticsHandler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { areaName, areaCommodity } = req.body;
-
+  
   if (!areaName || !areaCommodity) {
     return res.status(400).json({ error: 'Missing area name or commodities data' });
   }
@@ -103,8 +92,8 @@ Example format for the final output:
     const result = await model.generateContent(prompt);
     const raw = result.response.text();
     
-    // console.log(raw)
     const jsonText = raw.replace(/```(json)?/g, '').trim();
+    console.log("Statistics Handler : " + jsonText)
     
     try {
       const jsonResult = JSON.parse(jsonText);

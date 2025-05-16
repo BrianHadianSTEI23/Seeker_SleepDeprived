@@ -10,45 +10,63 @@ const IndonesiaMap = dynamic(() => import("./_components/indonesia/IndonesiaMap"
 export default function HomePage() {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
   const [provinceStats, setProvinceStats] = useState<Record<string, any> | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [statistics, setStatistics] = useState<any[] | null>(null);
   const [commodityIndex, setCommodityIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const isScrolling = useRef(false);
-  const default_area = "Indonesia";
-  const default_commodities = ["Coal", "Cocoa", "Coffee", "Crude Oil"];
 
+  const fetchStats = async (areaName: string, areaCommodity: string[]) => {
+    try {
+      console.log(areaName)
+      console.log(Object.keys(areaCommodity))
+      const response = await fetch("/api/StatisticsHandler", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          areaName,
+          areaCommodity: (Object.keys(areaCommodity)).join(", "),
+        }),
+      });
+
+      const data = await response.json();
+      setStatistics(data.result.commodities);
+      setCommodityIndex(0);
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+    }
+  };
+
+  // Fetch Indonesia stats on first load
   useEffect(() => {
-    const fetchInitialStats = async () => {
-      try {
-        const response = await fetch("/api/StatisticsHandler", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            areaName: default_area,
-            areaCommodity: default_commodities.join(", "),
-          }),
-        });
-
-        const data = await response.json();
-        setStatistics(data.result.commodities);
-      } catch (error) {
-        console.error("Error calling Gemini API:", error);
-      }
-    };
-
-    fetchInitialStats();
+    fetchStats("Indonesia", ["Coal", "Cocoa", "Coffee", "Crude Oil"]);
   }, []);
+
+  // When province is clicked on map
+  const handleProvinceStats = (data: {
+    areaName: string;
+    areaCommodity: string[];
+  }) => {
+    fetchStats(data.areaName, data.areaCommodity);
+  };
+
+  const handleNext = () => {
+    if (!statistics) return;
+    setCommodityIndex((prev) => (prev + 1) % statistics.length);
+  };
+
+  const handlePrev = () => {
+    if (!statistics) return;
+    setCommodityIndex((prev) => (prev - 1 + statistics.length) % statistics.length);
+  };
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (isScrolling.current) return;
 
       isScrolling.current = true;
-
       const direction = e.deltaY > 0 ? 1 : -1;
       const nextIndex = Math.min(Math.max(currentIndex + direction, 0), sectionsRef.current.length - 1);
-
       setCurrentIndex(nextIndex);
 
       setTimeout(() => {
@@ -60,16 +78,6 @@ export default function HomePage() {
     window.addEventListener("wheel", handleWheel);
     return () => window.removeEventListener("wheel", handleWheel);
   }, [currentIndex]);
-
-  const handleNext = () => {
-    if (!statistics) return;
-    setCommodityIndex((prev) => (prev + 1) % statistics.length);
-  };
-
-  const handlePrev = () => {
-    if (!statistics) return;
-    setCommodityIndex((prev) => (prev - 1 + statistics.length) % statistics.length);
-  };
 
   return (
     <div className="h-screen overflow-hidden scroll-smooth">
@@ -84,57 +92,28 @@ export default function HomePage() {
         ref={(el) => { sectionsRef.current[1] = el; }}
         className="h-screen bg-black"
       >
-        <IndonesiaMap onProvinceStats={setProvinceStats} />
+        <IndonesiaMap onProvinceStats={handleProvinceStats} />
       </div>
 
       <div
         ref={(el) => { sectionsRef.current[2] = el; }}
         className="h-screen w-screen flex justify-center text-center items-center bg-black text-white text-8xl relative"
       >
-        {/* Left/Right Buttons */}
+        {/* Controls */}
         {statistics && (
           <>
-            <button
-              onClick={handlePrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition"
-            >
+            <button onClick={handlePrev} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition">
               <ChevronLeft size={36} />
             </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition"
-            >
+            <button onClick={handleNext} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition">
               <ChevronRight size={36} />
             </button>
           </>
         )}
 
-        {provinceStats != null ? (
-          <div className="w-full bg-gray-800 text-white p-6">
-            <h2 className="text-2xl font-bold mb-4">Province Statistics</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {Object.entries(provinceStats).map(([key, value]) => (
-                <div key={key} className="bg-gray-900 p-4 rounded shadow">
-                  <p className="font-semibold capitalize">{key.replace(/_/g, " ")}:</p>
-                  <p className="text-sm">
-                    {typeof value === "object" ? JSON.stringify(value) : value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        </div>
-      </div>
-    );
-  }
-        
-
-
-        {/* Animated Commodity Stats */}
-        {/* <AnimatePresence mode="wait">
-          {statistics && (
+        {/* Display Stats */}
+        {statistics && (
+          <AnimatePresence mode="wait">
             <motion.div
               key={commodityIndex}
               initial={{ opacity: 0, x: 50 }}
@@ -145,5 +124,13 @@ export default function HomePage() {
             >
               <Statistics data={statistics[commodityIndex]} />
             </motion.div>
-          )}
-        </AnimatePresence> */}
+          </AnimatePresence>
+        )}
+      </div>
+    </div>
+  );
+}
+  
+  
+  
+  
