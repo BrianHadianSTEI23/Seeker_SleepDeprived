@@ -8,15 +8,15 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const IndonesiaMap = dynamic(() => import("./_components/indonesia/IndonesiaMap"), { ssr: false });
 
 export default function HomePage() {
-  type CommodityStats = {
-    name: string;
-    price: number;
-    unit: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any; // optional if you need flexible keys
-  };
+  // type CommodityStats = {
+  //   name: string;
+  //   price: number;
+  //   unit: string;
+  //   [key: string]: any; // optional if you need flexible keys
+  // };
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const [statistics, setStatistics] = useState<CommodityStats[] | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [statistics, setStatistics] = useState<any | null>(null);
   const [commodityIndex, setCommodityIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
 
