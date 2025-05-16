@@ -25,7 +25,8 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           areaName,
-          areaCommodity: (Object.keys(areaCommodity)).join(", "),
+          areaCommodity
+          // : (Object.keys(areaCommodity)).join(", "),
         }),
       });
 
