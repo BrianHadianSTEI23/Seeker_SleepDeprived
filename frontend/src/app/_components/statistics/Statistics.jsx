@@ -17,7 +17,7 @@ export default function Statistics({ data }) {
       <div className="mb-6 text-center">
         <h2 className="text-4xl font-Satoshi font-bold m-4">{data.commodity}</h2>
         <p className="text-xl font-Satoshi italic">Unit: {data.unit}</p>
-        <p className="text-lg font-Satoshi font-semibold">Recommendation: {data.investment_recommendation}</p>
+        <p className="text-lg font-Satoshi font-semibold">Invest Recommendation: {data.investment_recommendation}</p>
       </div>
 
       <ResponsiveContainer width="90%" height="70%">
