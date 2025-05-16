@@ -6,10 +6,14 @@ export default async function MapHandler(req, res) {
   }
 
   const { provinceData } = req.body;
+  
+  console.log(provinceData)
 
   if (!provinceData) {
     return res.status(400).json({ error: 'Missing province data' });
   }
+  
+
 
   const prompt = `
 You are an economic analyst. Analyze the following province data:

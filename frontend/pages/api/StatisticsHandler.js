@@ -6,6 +6,9 @@ export default async function StatisticsHandler(req, res) {
   }
 
   const { areaName, areaCommodity } = req.body;
+
+  console.log(areaName)
+  console.log(areaCommodity)
   
   if (!areaName || !areaCommodity) {
     return res.status(400).json({ error: 'Missing area name or commodities data' });
