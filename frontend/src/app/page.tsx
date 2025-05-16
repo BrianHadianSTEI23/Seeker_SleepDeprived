@@ -20,7 +20,7 @@ export default function HomePage() {
     try {
       console.log(areaName)
       console.log(Object.keys(areaCommodity))
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/StatisticsHandler`, { 
+      const response = await fetch(`/api/StatisticsHandler`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
