@@ -52,8 +52,17 @@ export default function HomePage() {
           sectionsRef.current[1] = el; // No return value
         }}
         className="h-screen bg-black"
-      >
+        >
         <IndonesiaMap />
+      </div>
+
+      <div
+        ref={(el) => {
+          sectionsRef.current[2] = el; // No return value
+        }}
+        className="h-screen w-screen flex justify-center items-center bg-black text-white text-8xl"
+      >
+        statistics (this is a placeholder)
       </div>
     </div>
   );
