@@ -9,7 +9,6 @@ const IndonesiaMap = dynamic(() => import("./_components/indonesia/IndonesiaMap"
 
 export default function HomePage() {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const [provinceStats, setProvinceStats] = useState<Record<string, any> | null>(null);
   const [statistics, setStatistics] = useState<any[] | null>(null);
   const [commodityIndex, setCommodityIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
