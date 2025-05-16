@@ -9,9 +9,10 @@ const IndonesiaMap = dynamic(() => import("./_components/indonesia/IndonesiaMap"
 
 export default function HomePage() {
   type CommodityStats = {
-  name: string;
-  price: number;
-  unit: string;
+    name: string;
+    price: number;
+    unit: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any; // optional if you need flexible keys
   };
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
