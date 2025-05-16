@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export default async function handler(req, res) {
+export default async function MapHandler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -27,10 +27,12 @@ Return ONLY a valid JSON object without explanation or formatting. Enclose the J
 Example format:
 \`\`\`
 {
-  "commodities": ["palm oil", "rubber"],
-  "price_fluctuation": "Increased by 5%",
+  "commodities": [
+    "palm oil" : "5%, 
+    "rubber" : -3%
+  ],
   "supply_condition": "Stable",
-  "investment_recommendation": "High potential in palm oil sector"
+  "investment_recommendation": ["High potential in palm oil sector"]
 }
 \`\`\`
 `;

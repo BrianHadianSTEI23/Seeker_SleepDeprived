@@ -79,7 +79,7 @@ export default function IndonesiaMap() {
 
     // Call Gemini API
     try {
-      const response = await fetch("/api/gemini", {
+      const response = await fetch("/api/MapHandler", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
